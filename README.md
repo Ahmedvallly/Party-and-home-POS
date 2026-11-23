@@ -20,8 +20,16 @@ Phones and other computers on the same shop network can sign in using `http://<c
 - Point of sale supports product pictures and editable order quantities and prices.
 - Invoicing and Sales orders use a transaction editor with customer details, line items, comments, and totals. On phones, line items become editable cards.
 - Press F4 to find stock or Ctrl+Enter to review a transaction.
+- Enter or scan a product's SKU and a quantity to add lines quickly. Totals update while quantities and prices are edited.
+- Save customers with account codes, phone and email, billing and delivery addresses, VAT numbers, payment terms, and default price levels. Select a customer to fill a transaction, or view their document history from Customers.
+- Unfinished orders are saved in the current browser for the signed-in user and restored after refresh. Drafts are local to that browser; they do not reserve stock or sync between devices.
+- Copy saved documents into a new sales order draft for repeat purchases. Saving or clearing the current draft is required first.
+- Save & print opens the browser print dialog after the document has saved. Saved documents can be viewed, reprinted, or saved as PDFs from Sales documents.
 - Sales orders are stored as quotations and leave stock unchanged. Convert a confirmed quotation to an invoice to deduct stock once.
-- Saved invoices are final. This version does not include refunds, credit notes, payment processing, or separate tax calculations.
+- Saved invoices are final. This version does not include refunds, credit notes, payment processing, or an accounts receivable ledger.
+- Settings includes print configuration for the shop's VAT number, an optional VAT-inclusive rate, banking details, and payment instructions. VAT is off by default; enabling it extracts included VAT from entered selling prices without adding it again.
+- Printed invoices and sales order notes use A4 layouts with customer and delivery details, references, numbered item lines, totals, signature space, and page numbering. Long documents continue onto additional pages.
+- Customer details, shop details, and print configuration are captured on new documents, so later changes do not rewrite those saved records.
 - Only owners and supervisors can view or edit cost prices. Customer documents exclude costs.
 
 ## Data

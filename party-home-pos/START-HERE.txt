@@ -36,7 +36,9 @@ View and print any document from Sales documents. Your browser's print
 dialog can save a PDF. Cost prices never appear on customer documents.
 The payment method/terms field records your choice; the app does not
 process a payment or track payment balances. All prices are in ZAR.
-No VAT or other tax is calculated separately.
+VAT is off by default. In Settings, enter your own VAT registration number
+and the VAT included in your selling prices if applicable. Entered prices
+remain the final totals; included VAT is shown as a breakdown on documents.
 
 STOCK AND REPORTS
 Use the boxes button in Products & stock to add stock or record a signed
@@ -101,3 +103,39 @@ On phones, line items become cards with touch-friendly quantity controls.
 Process invoice or Save sales order opens a review before saving.
 Ctrl+Enter also opens the review. Sales orders are stored as quotations
 and can be converted to invoices from Sales documents.
+
+CUSTOMERS AND FASTER ENTRY
+Use Customers to add or edit account codes, names, phone and email,
+billing and delivery addresses, VAT numbers, payment terms and price levels.
+Choose customer in an invoice or order to fill these details. Selecting a
+customer applies their default price level to existing inventory lines.
+Customer History shows documents linked to that saved customer.
+Owners and supervisors can archive customers; historical records remain.
+
+Type or scan a product SKU into Stock code / barcode, enter a quantity,
+and press Enter. Exact codes add immediately; other searches open the
+product picker. F4 opens the picker, and Enter selects its first result.
+Enter from a line quantity moves to price; Enter from price moves to SKU.
+Totals update while valid quantities and prices are typed.
+Stock is checked before reviewing invoices and again when saved.
+
+Drafts are saved in this browser for the signed-in user and restored after
+refresh. Drafts do not sync to other browsers or reserve inventory.
+Use Copy to new on a saved document to start a repeat sales order with the
+same items and prices. Save or clear your current draft first.
+
+PRINTED INVOICES AND SALES ORDER NOTES
+Use Save & print in the review dialog to save, then select your printer in
+the browser print dialog. Save invoice / Save sales order opens a preview
+without automatically printing. The Print / Save PDF button can reprint any
+saved document. Select A4 and disable browser headers/footers if enabled.
+Long documents have numbered continuation pages and final-page totals.
+Sales order notes are marked NOT FOR DESPATCHING because they do not
+reserve or deduct stock. Invoice conversion preserves the quoted details.
+
+Enter your shop's address/contact details and Print settings before use.
+Print settings support your own banking details, VAT number, optional
+included VAT rate, and payment instructions. No supplier details or QR
+codes from the reference photographs have been copied into your documents.
+New documents capture customer, shop and print details as saved snapshots.
+Changing those details later does not change a previously saved document.

@@ -20,6 +20,7 @@ function failure(e         ) {
  if (/insufficient_stock|CHECK constraint/.test(m)) return json({error:'Not enough stock. Refresh the sale and check the quantities.'},409);
  if (/UNIQUE constraint.*quote_id/.test(m)) return json({error:'This quotation has already been invoiced.'},409);
  if (/UNIQUE constraint.*sku/.test(m)) return json({error:'That SKU already exists. Use a unique item code.'},409);
+ if (/UNIQUE constraint.*customers.account/.test(m)) return json({error:'That customer account code already exists. Choose another code.'},409);
  if (/D1_|SQLITE|constraint/i.test(m)) { console.error(m); return json({error:'Could not save this record. Refresh and try again.'},409); }
  return json({error:m},400);
 }
@@ -27,15 +28,19 @@ export async function GET(env,visitor) {
  try {
  const {db,user,shop,role} = await context(env,visitor);
  if(!shop) return json({setup:true,user:{name:user.displayName,email:user.email},role});
- const [products,documents,lines,movements,members,departments] = await Promise.all([
+ const [products,documents,lines,movements,members,departments,customers,details,printing] = await Promise.all([
  db.prepare(`SELECT ${publicProductFields}${canSeeCost(role)?',cost':''} FROM products ORDER BY name`).all(),
  db.prepare('SELECT * FROM documents ORDER BY seq DESC').all(),
  db.prepare('SELECT * FROM lines').all(),
  db.prepare('SELECT * FROM movements ORDER BY created DESC LIMIT 200').all(),
  role==='owner'?db.prepare('SELECT * FROM members ORDER BY email').all():Promise.resolve({results:[]}),
- db.prepare('SELECT name FROM departments UNION SELECT category AS name FROM products ORDER BY name COLLATE NOCASE').all()
+ db.prepare('SELECT name FROM departments UNION SELECT category AS name FROM products ORDER BY name COLLATE NOCASE').all(),
+ db.prepare('SELECT * FROM customers ORDER BY name COLLATE NOCASE').all(),
+ db.prepare('SELECT * FROM document_details').all(),
+ db.prepare('SELECT details FROM print_settings WHERE id=1').first()
  ]);
- return json({setup:false,shop:{name:shop.name,address:shop.address,contact:shop.contact},user:{name:user.displayName,email:user.email},role,products:products.results,documents:documents.results,lines:lines.results,movements:movements.results,members:members.results,departments:departments.results.map(d=>d.name)});
+ const snapshots=new Map(details.results.map(d=>[d.document_id,JSON.parse(d.details)]));
+ return json({setup:false,shop:{name:shop.name,address:shop.address,contact:shop.contact},printing:printing?JSON.parse(printing.details):{},customers:customers.results,user:{name:user.displayName,email:user.email},role,products:products.results,documents:documents.results.map(d=>({...d,details:snapshots.get(d.id)||{}})),lines:lines.results,movements:movements.results,members:members.results,departments:departments.results.map(d=>d.name)});
  }catch(e){return failure(e);}
 }
 export async function POST(request         ,env,visitor) {
@@ -56,6 +61,26 @@ export async function POST(request         ,env,visitor) {
  if(!shop) throw new Error('Set up your shop first.');
  if(action==='shop') {
  owner(); await db.prepare('UPDATE shop SET name=?,address=?,contact=? WHERE id=1').bind(textValue(b.name,120,true),textValue(b.address||'',500),textValue(b.contact||'',200)).run();
+ } else if(action==='printing') {
+ owner();
+ const settings={};
+ for(const key of ['vat','bank','account_name','account_number','branch','footer'])settings[key]=textValue(b[key]||'',key==='footer'?500:160);
+ settings.vat_rate=integer(b.vat_rate??0,0,10000);
+ if(settings.vat_rate&&!settings.vat)throw new Error('Enter your shop VAT number before enabling VAT on documents.');
+ await db.prepare('INSERT INTO print_settings(id,details) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET details=excluded.details').bind(JSON.stringify(settings)).run();
+ } else if(action==='customer') {
+ const id=textValue(b.id,100,true),name=textValue(b.name,200,true),account=textValue(b.account,60,true);
+ const phone=textValue(b.phone||'',100),email=textValue(b.email||'',200),address=textValue(b.address||'',500),delivery=textValue(b.delivery||'',500),vat=textValue(b.vat||'',80),terms=textValue(b.terms||'Cash',80,true),level=textValue(b.level||'p1',2,true);
+ if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Enter a valid customer email address.');
+ if(!['p1','p2','p3','p4','p5'].includes(level))throw new Error('Choose P1 to P5.');
+ const prior=await db.prepare('SELECT id FROM customers WHERE id=?').bind(id).first();
+ if(prior){
+ const r=await db.prepare('UPDATE customers SET account=?,name=?,phone=?,email=?,address=?,delivery=?,vat=?,terms=?,level=?,version=version+1 WHERE id=? AND version=?').bind(account,name,phone,email,address,delivery,vat,terms,level,id,integer(b.version,1)).run();
+ if(!r.meta.changes)throw new Error('This customer changed since you opened it. Refresh and edit again.');
+ }else await db.prepare('INSERT INTO customers(id,account,name,phone,email,address,delivery,vat,terms,level,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)').bind(id,account,name,phone,email,address,delivery,vat,terms,level,new Date().toISOString()).run();
+ return json({ok:true,id});
+ } else if(action==='archiveCustomer') {
+ supervisor();await db.prepare('UPDATE customers SET active=?,version=version+1 WHERE id=?').bind(b.active?1:0,textValue(b.id,100,true)).run();
  } else if(action==='member') {
  owner(); let email=user.local?username(b.username??b.email):textValue(b.username??b.email,200,true).toLowerCase();
  if(user.local){
@@ -133,7 +158,17 @@ export async function POST(request         ,env,visitor) {
  if(!['p1','p2','p3','p4','p5'].includes(level)) throw new Error('Choose P1 to P5.');
  const customer=source?.customer||textValue(b.customer||'Walk-in customer',200,true),contact=source?.contact||textValue(b.contact||'',300),address=source?.address||textValue(b.address||'',500),notes=source?.notes||textValue(b.notes||'',1000);
  const payment=b.kind==='quote'?'Quotation':textValue(b.payment||'Cash',80,true);
+ let details;
+ if(source){const saved=await db.prepare('SELECT details FROM document_details WHERE document_id=?').bind(source.id).first();details=saved?JSON.parse(saved.details):{};}
+ else{
+ const customerId=b.customerId?textValue(b.customerId,100,true):null;
+ if(customerId&&!await db.prepare('SELECT id FROM customers WHERE id=? AND active=1').bind(customerId).first())throw new Error('This saved customer is unavailable. Choose another customer.');
+ const printing=await db.prepare('SELECT details FROM print_settings WHERE id=1').first();
+ details={customerId,account:textValue(b.account||'',60),customerVat:textValue(b.customerVat||'',80),delivery:textValue(b.delivery||'',500),orderRef:textValue(b.orderRef||'',100),deliveryDate:textValue(b.deliveryDate||'',10),salesRep:textValue(b.salesRep||user.displayName||user.email,200),shop:{name:shop.name,address:shop.address,contact:shop.contact},printing:printing?JSON.parse(printing.details):{}};
+ if(details.deliveryDate){const parsed=new Date(details.deliveryDate+'T00:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(details.deliveryDate)||!Number.isFinite(parsed.getTime())||parsed.toISOString().slice(0,10)!==details.deliveryDate)throw new Error('Enter a valid delivery date.');}
+ }
  const statements=[db.prepare('INSERT INTO documents(id,seq,kind,customer,contact,address,notes,created,quote_id,level,payment,actor) VALUES(?,(SELECT COALESCE(MAX(seq),0)+1 FROM documents),?,?,?,?,?,?,?,?,?,?)').bind(id,b.kind,customer,contact,address,notes,new Date().toISOString(),source?.id||null,level,payment,user.email)];
+ statements.push(db.prepare('INSERT INTO document_details(document_id,details) VALUES(?,?)').bind(id,JSON.stringify(details)));
  for(const l of validated) statements.push(db.prepare('INSERT INTO lines(id,document_id,product_id,name,sku,unit,qty,price) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),id,l.productId,l.name,l.sku,l.unit,l.qty,l.price));
  await db.batch(statements);
  return json({ok:true,id});

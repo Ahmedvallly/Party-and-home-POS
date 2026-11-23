@@ -34,5 +34,6 @@ mkdirSync('dist/server',{recursive:true});mkdirSync('dist/.openai',{recursive:tr
 writeFileSync('dist/server/index.js',worker);writeFileSync('dist/.openai/hosting.json',read('.openai/hosting.json'));
 writeFileSync('dist/drizzle/0000_pos.sql',read('server/schema.sql'));
 writeFileSync('dist/drizzle/0001_departments.sql',read('server/departments.sql'));
-writeFileSync('dist/drizzle/meta/_journal.json',JSON.stringify({version:'7',dialect:'sqlite',entries:[{idx:0,version:'6',when:1795248000000,tag:'0000_pos',breakpoints:false},{idx:1,version:'6',when:1795334400000,tag:'0001_departments',breakpoints:false}]},null,2));
+writeFileSync('dist/drizzle/0002_customers.sql',read('server/customers.sql'));
+writeFileSync('dist/drizzle/meta/_journal.json',JSON.stringify({version:'7',dialect:'sqlite',entries:[{idx:0,version:'6',when:1795248000000,tag:'0000_pos',breakpoints:false},{idx:1,version:'6',when:1795334400000,tag:'0001_departments',breakpoints:false},{idx:2,version:'6',when:1795428000000,tag:'0002_customers',breakpoints:false}]},null,2));
 console.log('Built dependency-free Worker, web assets and database migration in dist/.');
