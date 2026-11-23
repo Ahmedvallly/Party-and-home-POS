@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-set "POS_REMOTE=https://github.com/Ahmedvally/Party-and-home-POS.git"
+set "POS_REMOTE=https://github.com/Ahmedvallly/Party-and-home-POS.git"
 set "POS_REPO=%CD:\=/%"
 set "POS_GIT="
 where git.exe >nul 2>nul
