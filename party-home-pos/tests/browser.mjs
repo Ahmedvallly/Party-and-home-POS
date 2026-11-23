@@ -24,11 +24,37 @@ await evaluate("document.querySelector('[name=username]').value='owner';document
 await waitFor("!!document.querySelector('[data-form=setup]')");
 await evaluate("document.querySelector('[data-form=setup]').requestSubmit();true");await waitFor("!document.querySelector('[data-form=setup]')&&!!document.querySelector('[data-action=new-product]')");
 await evaluate("(async()=>{await fetch('/api/pos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'departments',names:['Party essentials']})});document.querySelector('[data-action=refresh]').click();return true;})()");await pause(250);await evaluate("document.querySelector('[data-action=new-product]').click();true");await waitFor("!!document.querySelector('[data-form=product]')");
-await evaluate("(()=>{const f=document.querySelector('[data-form=product]');f.elements.name.value='White paper plates · 20 pack';f.elements.sku.value='PP-001';f.elements.category.value='Party essentials';f.elements.stock.value='10';f.elements.cost.value='12';for(const [i,l]of ['p1','p2','p3','p4','p5'].entries())f.elements[l].value=String(25-i);f.requestSubmit();return true;})()");
+await evaluate("(()=>{const f=document.querySelector('[data-form=product]');f.elements.name.value='White paper plates · 20 pack';f.elements.sku.value='PP-001';f.elements.description.value='Disposable white paper plates for parties, 18 cm diameter';f.elements.packaging.value='20 plates per sealed pack';f.elements.category.value='Party essentials';f.elements.stock.value='10';f.elements.cost.value='12';for(const [i,l]of ['p1','p2','p3','p4','p5'].entries())f.elements[l].value=String(25-i);f.requestSubmit();return true;})()");
 await waitFor("!!document.querySelector('.product-card')&&!document.querySelector('[data-form=product]')");
-// A real PNG upload verifies the multipart route and picture rendering.
-await evaluate("(async()=>{const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='),c=>c.charCodeAt(0));const f=new FormData();f.append('file',new File([bytes],'test.png',{type:'image/png'}));const r=await fetch('/api/images',{method:'POST',body:f});if(!r.ok)throw new Error(await r.text());const {url}=await r.json();const d=await(await fetch('/api/pos')).json();const p=d.products[0];const s=await fetch('/api/pos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...p,action:'product',image:url})});if(!s.ok)throw new Error(await s.text());return true;})()");
+// A visible PNG fixture verifies multipart upload and product image rendering.
+await evaluate("(async()=>{const canvas=document.createElement('canvas');canvas.width=240;canvas.height=240;const ctx=canvas.getContext('2d');ctx.fillStyle='#eef4ff';ctx.fillRect(0,0,240,240);ctx.fillStyle='#cad7ed';ctx.beginPath();ctx.ellipse(120,142,88,65,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffffff';ctx.strokeStyle='#bbcae1';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(120,122,88,65,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='#d9e3f1';ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(120,122,65,44,0,0,Math.PI*2);ctx.stroke();const bytes=Uint8Array.from(atob(canvas.toDataURL('image/png').split(',')[1]),c=>c.charCodeAt(0));const f=new FormData();f.append('file',new File([bytes],'test.png',{type:'image/png'}));const r=await fetch('/api/images',{method:'POST',body:f});if(!r.ok)throw new Error(await r.text());const {url}=await r.json();const d=await(await fetch('/api/pos')).json();const p=d.products[0];const s=await fetch('/api/pos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...p,action:'product',image:url})});if(!s.ok)throw new Error(await s.text());return true;})()");
 await evaluate("document.querySelector('[data-action=refresh]').click();true");await waitFor("!!document.querySelector('.product-card img')");
+// Stockmaster and both transaction pickers show the uploaded image, description and packaging.
+await evaluate("document.querySelector('[data-action=nav][data-page=stockmaster]').click();true");
+await waitFor("document.querySelector('.stockmaster-card img')?.complete");
+assert.match(await evaluate("document.querySelector('.stockmaster-card').innerText"),/20 plates per sealed pack/);
+assert.match(await evaluate("document.querySelector('.stockmaster-card').innerText"),/18 cm diameter/);
+await mkdir(join(root,'outputs'),{recursive:true});
+await writeFile(join(root,'outputs','stockmaster-desktop.png'),Buffer.from((await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
+for(const page of ['orders','invoices']){
+ await evaluate("document.querySelector('[data-action=nav][data-page="+page+"]').click();document.querySelector('[data-action=pick-stock]').click();var stockSearch=document.querySelector('#stock-search');stockSearch.value='sealed diameter';stockSearch.dispatchEvent(new Event('input',{bubbles:true}));true");
+ assert.equal(await evaluate("document.querySelectorAll('.visual-stock-item').length"),1);
+ assert.equal(await evaluate("document.querySelector('.visual-stock-item img').getAttribute('src').startsWith('/api/images/')"),true);
+ assert.match(await evaluate("document.querySelector('.visual-stock-item').innerText"),/20 plates per sealed pack/);
+ assert.match(await evaluate("document.querySelector('.visual-stock-item').innerText"),/18 cm diameter/);
+ await writeFile(join(root,'outputs',page+'-stock-search-desktop.png'),Buffer.from((await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
+ await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await pause(300);
+ assert.equal(await evaluate('document.documentElement.scrollWidth<=window.innerWidth'),true,'stock search overflows on phone');
+ assert.equal(await evaluate("document.querySelector('.modal').scrollWidth<=document.querySelector('.modal').clientWidth"),true,'stock picker content overflows');
+ if(page==='invoices')await writeFile(join(root,'outputs','stock-search-mobile.png'),Buffer.from((await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
+ await evaluate("document.querySelector('[data-action=close-modal]').click();true");
+ await cdp('Emulation.setDeviceMetricsOverride',{width:1480,height:1040,deviceScaleFactor:1,mobile:false});await pause(250);
+}
+await cdp('Emulation.setDeviceMetricsOverride',{width:360,height:844,deviceScaleFactor:1,mobile:true});await evaluate("document.querySelector('[data-action=nav][data-page=stockmaster]').click();true");await pause(300);
+assert.equal(await evaluate('document.documentElement.scrollWidth<=window.innerWidth'),true,'Stockmaster overflows on phone');
+await writeFile(join(root,'outputs','stockmaster-mobile.png'),Buffer.from((await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
+await cdp('Emulation.setDeviceMetricsOverride',{width:1480,height:1040,deviceScaleFactor:1,mobile:false});
+
 // Create a reusable customer through the actual UI, and configure the printed footer.
 await evaluate("document.querySelector('[data-action=nav][data-page=customers]').click();document.querySelector('[data-action=new-customer]').click();true");
 await waitFor("!!document.querySelector('[data-form=customer]')");

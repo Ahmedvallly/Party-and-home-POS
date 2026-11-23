@@ -5,5 +5,12 @@ export function openDatabase(filename){
  sqlite.exec(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
  sqlite.exec(readFileSync(new URL('./departments.sql',import.meta.url),'utf8'));
  sqlite.exec(readFileSync(new URL('./customers.sql',import.meta.url),'utf8'));
+ // Apply additive product fields once, inside a lock, without replacing shop data.
+ sqlite.exec('BEGIN IMMEDIATE');
+ try{
+ const columns=new Set(sqlite.prepare('PRAGMA table_info(products)').all().map(c=>c.name));
+ for(const name of ['description','packaging'])if(!columns.has(name))sqlite.exec(`ALTER TABLE products ADD COLUMN ${name} TEXT NOT NULL DEFAULT ''`);
+ sqlite.exec('COMMIT');
+ }catch(e){sqlite.exec('ROLLBACK');sqlite.close();throw e;}
  return {sqlite,prepare(sql){const stmt=sqlite.prepare(sql);let values=[];const wrapper={bind(...args){values=args;return wrapper;},async first(){return stmt.get(...values)||null;},async all(){return {results:stmt.all(...values)};},runSync(){const r=stmt.run(...values);return {meta:{changes:Number(r.changes)}};},async run(){return wrapper.runSync();}};return wrapper;},async batch(statements){sqlite.exec('BEGIN IMMEDIATE');try{const results=statements.map(s=>s.runSync());sqlite.exec('COMMIT');return results;}catch(e){sqlite.exec('ROLLBACK');throw e;}}};
 }

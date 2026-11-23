@@ -18,6 +18,9 @@ Phones and other computers on the same shop network can sign in using `http://<c
 ## Sales and stock
 
 - Point of sale supports product pictures and editable order quantities and prices.
+- Stockmaster shows large product pictures, names, detailed descriptions, packaging, stock, and all five selling prices. Search by description, packaging, stock code, or department; filter active, low-stock, and archived products.
+- Product forms include a detailed description and packaging / pack size (for example, `12 x 100 pieces per carton`). Packaging describes contents; stock deductions still use the product's selling unit.
+- Invoice and sales order stock search results show a large picture, description, packaging, stock availability, and the selected selling price. Added transaction lines also show the picture and packaging.
 - Invoicing and Sales orders use a transaction editor with customer details, line items, comments, and totals. On phones, line items become editable cards.
 - Press F4 to find stock or Ctrl+Enter to review a transaction.
 - Enter or scan a product's SKU and a quantity to add lines quickly. Totals update while quantities and prices are edited.

@@ -1,6 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {openDatabase} from '../server/database.js';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
 import {GET,POST} from '../server/api.js';
 const owner={userId:'owner',email:'owner@example.com',displayName:'Owner'},staff={userId:'staff',email:'staff@example.com',displayName:'Staff'},supervisor={userId:'supervisor',email:'supervisor@example.com',displayName:'Supervisor'};
 function fixture(){const db=openDatabase(':memory:');return {db,env:{DB:db}};}
@@ -9,6 +12,30 @@ async function setup(env){assert.equal((await post(env,{action:'setup',name:'Tes
 async function product(env,id='plates',stock=10){const r=await post(env,{action:'product',id,sku:id,name:'Paper plates',unit:'Pack',category:'Party',stock,low:3,image:'',cost:500,p1:1000,p2:900,p3:800,p4:700,p5:600});assert.equal(r.status,200,JSON.stringify(await r.json()));}
 const doc=(id,kind='invoice',qty=3)=>({action:'document',id,kind,level:'p1',customer:'Customer',payment:'Cash',lines:[{productId:'plates',qty,price:1000}]});
 const stock=db=>db.sqlite.prepare("SELECT stock FROM products WHERE id='plates'").get().stock;
+
+test('description and packaging persist, survive older clients, and never change stock units or cost access',async()=>{
+ const {db,env}=fixture();try{
+ await setup(env);await product(env);await post(env,{action:'member',email:staff.email,role:'staff'});
+ let p=(await(await GET(env,owner)).json()).products[0];
+ assert.equal((await post(env,{...p,action:'product',description:'White disposable paper plates, 18 cm',packaging:'20 plates per sealed pack'})).status,200);
+ p=(await(await GET(env,staff)).json()).products[0];assert.equal(p.description,'White disposable paper plates, 18 cm');assert.equal(p.packaging,'20 plates per sealed pack');assert.equal(Object.hasOwn(p,'cost'),false);
+ const legacy={...p,action:'product',name:'Paper plates updated',cost:1};delete legacy.description;delete legacy.packaging;
+ assert.equal((await post(env,legacy,staff)).status,200);
+ p=(await(await GET(env,owner)).json()).products[0];assert.equal(p.packaging,'20 plates per sealed pack');assert.equal(p.description,'White disposable paper plates, 18 cm');assert.equal(p.cost,500);assert.equal(p.stock,10);assert.equal(p.unit,'Pack');
+ assert.equal((await post(env,{...p,action:'product',packaging:'x'.repeat(161)})).status,400);
+ assert.equal((await post(env,{...p,action:'product',description:'x'.repeat(1001)})).status,400);
+ assert.equal((await post(env,doc('packaging-invoice','invoice',3))).status,200);assert.equal(stock(db),7);
+ }finally{db.sqlite.close();}
+});
+
+test('Stockmaster migration preserves legacy product data and can reopen repeatedly',()=>{
+ mkdirSync('.sites-runtime',{recursive:true});const path=resolve('.sites-runtime','stockmaster-migration-'+crypto.randomUUID()+'.sqlite');
+ const legacy=new DatabaseSync(path);legacy.exec(readFileSync('server/schema.sql','utf8'));
+ legacy.prepare('INSERT INTO products(id,sku,name,category,unit,stock,cost,p1,p2,p3,p4,p5) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run('legacy','OLD-001','Existing product','Home','Carton',17,333,1000,900,800,700,600);legacy.close();
+ let db=openDatabase(path);let p=db.sqlite.prepare('SELECT * FROM products').get();assert.equal(p.stock,17);assert.equal(p.cost,333);assert.equal(p.p5,600);assert.equal(p.unit,'Carton');assert.equal(p.description,'');assert.equal(p.packaging,'');
+ db.sqlite.prepare('UPDATE products SET description=?,packaging=?').run('Existing product details','12 packs per carton');db.sqlite.close();
+ db=openDatabase(path);try{p=db.sqlite.prepare('SELECT * FROM products').get();assert.equal(p.packaging,'12 packs per carton');assert.equal(p.description,'Existing product details');assert.equal(p.stock,17);assert.equal(db.sqlite.prepare('PRAGMA integrity_check').get().integrity_check,'ok');}finally{db.sqlite.close();}
+});
 
 test('customers persist with unique account codes, validated details and optimistic updates',async()=>{
  const {db,env}=fixture();try{

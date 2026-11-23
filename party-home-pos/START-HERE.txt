@@ -139,3 +139,20 @@ included VAT rate, and payment instructions. No supplier details or QR
 codes from the reference photographs have been copied into your documents.
 New documents capture customer, shop and print details as saved snapshots.
 Changing those details later does not change a previously saved document.
+
+STOCKMASTER AND VISUAL PRODUCT SEARCH
+Open Stockmaster in the sidebar to browse pictures, product descriptions,
+packaging, stock quantities and P1-P5 prices. Filter by department, low stock,
+or archived products. Search by name, detailed description, packaging or SKU.
+
+Use Add product or Edit product to upload a picture and enter the detailed
+description and Packaging / pack size, for example 12 x 100 pieces per carton.
+Packaging describes the contents only. Stock is still counted and deducted
+in the selling unit you specify, such as Pack, Each or Carton.
+
+In Invoicing or Sales orders, click Add stock (F4). Matching items display
+the picture, full description, packaging, stock and selected price together.
+Search words can match different fields, such as a size in the description
+and a pack quantity in packaging. Select the card to add it to the document.
+Out-of-stock items can be quoted but cannot be added to an invoice.
+Added invoice/order lines also show the current picture and packaging.

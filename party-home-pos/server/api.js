@@ -107,18 +107,19 @@ export async function POST(request         ,env,visitor) {
  const image=textValue(b.image||'',200);
  if(image && !/^\/api\/images\/[a-f0-9-]{36}$/.test(image)) throw new Error('Upload a product picture first.');
  const prices=['p1','p2','p3','p4','p5'].map(k=>price(b[k])); const low=integer(b.low,0,1000000);
- const existing=await db.prepare('SELECT id FROM products WHERE id=?').bind(id).first();
+ const existing=await db.prepare('SELECT id,description,packaging FROM products WHERE id=?').bind(id).first();
+ const description=textValue(b.description??existing?.description??'',1000),packaging=textValue(b.packaging??existing?.packaging??'',160);
  if(existing) {
  const costSql=canSeeCost(role)?',cost=?':'';
- const params      =[sku,name,category,unit,image,low,...prices];
+ const params      =[sku,name,description,packaging,category,unit,image,low,...prices];
  if(canSeeCost(role)) params.push(price(b.cost));
  params.push(id,integer(b.version,1));
- const r=await db.prepare(`UPDATE products SET sku=?,name=?,category=?,unit=?,image=?,low=?,p1=?,p2=?,p3=?,p4=?,p5=?${costSql},version=version+1 WHERE id=? AND version=?`).bind(...params).run();
+ const r=await db.prepare(`UPDATE products SET sku=?,name=?,description=?,packaging=?,category=?,unit=?,image=?,low=?,p1=?,p2=?,p3=?,p4=?,p5=?${costSql},version=version+1 WHERE id=? AND version=?`).bind(...params).run();
  if(!r.meta.changes) throw new Error('This item changed since you opened it. Refresh and edit again.');
  } else {
  const stock=integer(b.stock,0,1000000),cost=canSeeCost(role)?price(b.cost):0;
  await db.batch([
- db.prepare('INSERT INTO products(id,sku,name,category,unit,image,low,p1,p2,p3,p4,p5,stock,cost) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,sku,name,category,unit,image,low,...prices,stock,cost),
+ db.prepare('INSERT INTO products(id,sku,name,description,packaging,category,unit,image,low,p1,p2,p3,p4,p5,stock,cost) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(id,sku,name,description,packaging,category,unit,image,low,...prices,stock,cost),
  db.prepare('INSERT INTO movements(id,product_id,delta,reason,created,actor) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),id,stock,'Opening stock',new Date().toISOString(),user.email)
  ]);
  }
