@@ -1,0 +1,27 @@
+# Local configuration, credentials, and tool state
+.env*
+.dev.vars*
+*.pem
+.agents/
+.codex/
+
+# Dependencies, generated builds, and test artifacts
+node_modules/
+dist/
+.sites-runtime/
+.wrangler/
+outputs/
+coverage/
+*.log
+
+# Live shop records, customer data, credentials, and backups
+data/
+backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,103 @@
+PARTY & HOME POS
+
+OPEN YOUR WEBSITE
+Double-click Start POS.cmd. It starts the app in the background and opens
+http://localhost:3000 in your browser. Node.js 22.13 or newer is required;
+the Node.js version installed on this computer is supported.
+No package downloads are needed.
+
+FIRST USE
+1. Create your owner account with a username and a password. There are no default passwords.
+2. Enter your shop name, contact details and address.
+3. Add products in Products & stock: picture, unique SKU, department, selling
+   unit, opening stock, low-stock threshold and P1 through P5 selling prices.
+4. The owner and supervisors can enter and view cost prices. Sales staff
+   cannot retrieve costs from the server, including through the API.
+5. To add staff, open Settings & access. Enter their username, role and password.
+   Existing staff roles/passwords can be changed using the pencil button.
+
+SELLING
+Select a price level and click product pictures to add items to the order.
+Quantities and unit prices can be edited manually. Changing the price level
+applies that level's price to every inventory item already in the order.
+Use Add a manual item for services or other untracked descriptions.
+
+A quotation is a sales order and does not reserve or deduct inventory.
+An invoice deducts quantities immediately when saved. For example, stock
+of 10 packs becomes 7 after invoicing 3 packs. Stock cannot go negative.
+Manual items do not affect product stock.
+
+Saved quotations can be converted into an invoice once, using the quoted
+prices. Repeated saves cannot deduct the same invoice's stock twice.
+Invoices are final records and cannot be edited/deleted. This version has
+no refunds, credit notes or invoice cancellation workflow.
+
+View and print any document from Sales documents. Your browser's print
+dialog can save a PDF. Cost prices never appear on customer documents.
+The payment method/terms field records your choice; the app does not
+process a payment or track payment balances. All prices are in ZAR.
+No VAT or other tax is calculated separately.
+
+STOCK AND REPORTS
+Use the boxes button in Products & stock to add stock or record a signed
+adjustment with a reason. Existing stock is not overwritten when editing
+product details. Supervisors can archive/restore products without deleting
+their history. Stock activity shows the most recent 200 movements.
+
+Sales reports show invoice revenue, invoice counts, units sold per day,
+sales trends and bestsellers over 7, 30 or 90 days. Export creates a CSV.
+Quotations are excluded from sales figures. Dates use South African time.
+
+DATA AND ACCESS
+Records and account password hashes persist in data/pos.sqlite. Uploaded
+pictures live in data/images. Keep a backup of the entire data folder.
+Stop the app before copying a backup, or include the SQLite -wal/-shm files.
+Signing out expires your session. Sessions also expire after eight hours.
+Passwords are salted and hashed. Do not delete the data folder to restart.
+
+PHONE AND COMPUTER
+The app listens on your local network so phones and computers on the same
+shop Wi-Fi can use the same stock and sales database. Keep this computer
+on with the app running. On the phone, open http://192.168.8.43:3000 and
+sign in with a team account. This address can change if the router assigns
+a different IP; run ipconfig to find the computer's current IPv4 address.
+Windows Firewall may need to allow Node.js on your private network.
+The computer browser can continue using http://localhost:3000.
+Set POS_HOST=127.0.0.1 to restrict the app to this computer again.
+Internet hosting has not been completed. Local network access does not
+make the app available over mobile data or outside the shop network.
+
+DEVELOPMENT
+node server/local.mjs       Start in a terminal (Ctrl+C stops it)
+node --test tests/pos.test.mjs   Run inventory and permission tests
+node tests/http.test.mjs        Run real HTTP/authentication tests
+node scripts/build-portable.mjs Build a Cloudflare Worker under dist/
+node tests/browser.mjs          Chrome browser checks where supported
+
+Core files: web/app.js, web/style.css, server/api.js, server/database.js,
+server/local.mjs, server/schema.sql. The hosted Worker uses Sites-managed
+ChatGPT authentication and the DB/BUCKET bindings declared in
+.openai/hosting.json. The local app uses its own local accounts.
+
+Usernames and passwords have no character rules or minimum length.
+Both fields must be filled in.
+Usernames are not case-sensitive. Existing email-based accounts can still
+sign in using their previous email as the username and their existing password.
+
+DEPARTMENTS
+Open Departments in the sidebar. Enter all department names, one per line,
+and click Save departments. Existing product categories are automatically
+listed as departments. Choose a department from the dropdown when creating
+or editing a product. You can also add departments from that product form.
+Use the Department filter in Point of sale and Products & stock to show
+only items from one department. Select All departments to show everything.
+Unused departments can be removed from the Departments page.
+
+INVOICING AND SALES ORDERS
+Use Invoicing or Sales orders in the sidebar for the transaction layout.
+Enter customer details at the top, use Add stock (F4) to find items, then
+edit quantities and prices in the line table. Comments and totals are below.
+On phones, line items become cards with touch-friendly quantity controls.
+Process invoice or Save sales order opens a review before saving.
+Ctrl+Enter also opens the review. Sales orders are stored as quotations
+and can be converted to invoices from Sales documents.

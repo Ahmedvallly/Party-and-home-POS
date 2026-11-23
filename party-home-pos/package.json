@@ -1,0 +1,18 @@
+{
+  "name": "party-home-pos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node server/local.mjs",
+    "dev": "node server/local.mjs",
+    "pretest": "node scripts/build-portable.mjs",
+    "test": "node --test tests/pos.test.mjs tests/http.test.mjs tests/worker.test.mjs tests/client.test.mjs",
+    "build": "node scripts/build-portable.mjs",
+    "test:http": "node tests/http.test.mjs",
+    "test:browser": "node tests/browser.mjs"
+  }
+}

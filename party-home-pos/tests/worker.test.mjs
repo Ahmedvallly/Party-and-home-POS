@@ -1,0 +1,5 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import worker from '../dist/server/index.js';
+import {openDatabase} from '../server/database.js';
+test('built Worker serves the app and enforces authenticated API access',async()=>{const db=openDatabase(':memory:'),env={DB:db};try{assert.equal((await worker.fetch(new Request('https://pos.example/'),env)).status,200);assert.equal((await worker.fetch(new Request('https://pos.example/app.js'),env)).status,200);assert.equal((await worker.fetch(new Request('https://pos.example/api/pos'),env)).status,401);const headers={'Content-Type':'application/json','oai-authenticated-user-id':'owner','oai-authenticated-user-email':'owner@example.com'};const r=await worker.fetch(new Request('https://pos.example/api/pos',{method:'POST',headers,body:JSON.stringify({action:'setup',name:'Hosted shop'})}),env);assert.equal(r.status,200);const state=await(await worker.fetch(new Request('https://pos.example/api/pos',{headers}),env)).json();assert.equal(state.role,'owner');assert.equal(state.shop.name,'Hosted shop');}finally{db.sqlite.close();}});
